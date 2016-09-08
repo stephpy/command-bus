@@ -13,15 +13,21 @@ class DirectBus implements CommandBusInterface
 {
     private $locator;
     private $methodResolver;
+    private $expectReturn = false;
+
+    const NOT_EXPECT_RETURN = false;
+    const EXPECT_RETURN = true;
 
     /**
      * @param CommandHandlerLocatorInterface $locator
      * @param HandlerMethodResolverInterface $methodResolver
+     * @param boolean                        $expectReturn
      */
-    public function __construct(CommandHandlerLocatorInterface $locator, HandlerMethodResolverInterface $methodResolver)
+    public function __construct(CommandHandlerLocatorInterface $locator, HandlerMethodResolverInterface $methodResolver, $expectReturn = self::NOT_EXPECT_RETURN)
     {
-        $this->locator         = $locator;
+        $this->locator        = $locator;
         $this->methodResolver = $methodResolver;
+        $this->expectReturn   = $expectReturn;
     }
 
     public function getHandleType()
@@ -34,7 +40,7 @@ class DirectBus implements CommandBusInterface
         $handler = $this->locator->getCommandHandler($command);
 
         if (is_callable($handler)) {
-            $handler($command);
+            $returnData = $handler($command);
         } elseif (is_object($handler)) {
             $method = null;
             if ($handler instanceof HandlerDefinition) {
@@ -49,9 +55,11 @@ class DirectBus implements CommandBusInterface
             if (!method_exists($handler, $method)) {
                 throw new \RuntimeException(sprintf("Service %s has no method %s to handle command.", get_class($handler), $method));
             }
-            $handler->$method($command);
+            $returnData = $handler->$method($command);
         } else {
             throw new \LogicException(sprintf('Handler locator return a not object|callable handler, type is %s', gettype($handler)));
         }
+
+        return $this->expectReturn ? $returnData : null;
     }
 }
