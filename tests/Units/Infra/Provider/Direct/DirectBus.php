@@ -3,6 +3,7 @@
 namespace Rezzza\CommandBus\Tests\Units\Infra\Provider\Direct;
 
 use mageekguy\atoum;
+use Rezzza\CommandBus\Infra\Provider\Direct\DirectBus as SUT;
 
 class DirectBus extends atoum\test
 {
@@ -22,8 +23,36 @@ class DirectBus extends atoum\test
                 $sut = $this->newTestedInstance($locator, $methodResolver)
             )
             ->when(
-                $sut->handle($command)
+                $result = $sut->handle($command)
             )
+            ->variable($result)->isNull()
+            ->then
+                ->mock($handler)
+                    ->call('sendWelcomeEmail')
+                    ->withArguments($command)
+                    ->once()
+        ;
+    }
+
+    public function test_object_handler_should_return_something()
+    {
+        $this
+            ->given(
+                $command = new \Rezzza\CommandBus\Tests\Fixtures\Command\SendWelcomeEmailCommand,
+                $handler = new \mock\Rezzza\CommandBus\Tests\Fixtures\UserService,
+                $this->calling($handler)->sendWelcomeEmail = true
+            )
+            ->and(
+                $locator = new \mock\Rezzza\CommandBus\Domain\Handler\CommandHandlerLocatorInterface,
+                $this->calling($locator)->getCommandHandler = $handler,
+                $methodResolver = new \mock\Rezzza\CommandBus\Domain\Handler\HandlerMethodResolverInterface,
+                $this->calling($methodResolver)->resolveMethodName = 'sendWelcomeEmail',
+                $sut = $this->newTestedInstance($locator, $methodResolver, SUT::EXPECT_RETURN)
+            )
+            ->when(
+                $result = $sut->handle($command)
+            )
+            ->boolean($result)->isTrue()
             ->then
                 ->mock($handler)
                     ->call('sendWelcomeEmail')
